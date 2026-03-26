@@ -7,10 +7,9 @@
  */
 package org.jhotdraw.draw.connector;
 
-import static org.jhotdraw.draw.AttributeKeys.*;
-
-import java.awt.geom.*;
-import org.jhotdraw.draw.*;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import org.jhotdraw.draw.AttributeKeys;
 import org.jhotdraw.draw.figure.ConnectionFigure;
 import org.jhotdraw.draw.figure.Figure;
 import org.jhotdraw.utils.geom.Geom;
@@ -76,9 +75,9 @@ public class ChopRectangleConnector extends AbstractConnector {
   protected Point2D.Double chop(Figure target, Point2D.Double from) {
     target = getConnectorTarget(target);
     Rectangle2D.Double r = target.getBounds();
-    if (target.attr().get(STROKE_COLOR) != null) {
+    if (target.attr().get(AttributeKeys.STROKE_COLOR) != null) {
       double grow;
-      switch (target.attr().get(STROKE_PLACEMENT)) {
+      switch (target.attr().get(AttributeKeys.STROKE_PLACEMENT)) {
         case CENTER:
         default:
           grow = AttributeKeys.getStrokeTotalWidth(target, AttributeKeys.scaleFromContext(target))

@@ -7,10 +7,14 @@
  */
 package org.jhotdraw.draw.connector;
 
-import static org.jhotdraw.draw.AttributeKeys.*;
+import static org.jhotdraw.draw.AttributeKeys.STROKE_COLOR;
+import static org.jhotdraw.draw.AttributeKeys.STROKE_PLACEMENT;
+import static org.jhotdraw.draw.AttributeKeys.STROKE_WIDTH;
+import static org.jhotdraw.draw.AttributeKeys.getStrokeTotalWidth;
 
-import java.awt.*;
-import java.awt.geom.*;
+import java.awt.Color;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import org.jhotdraw.draw.AttributeKeys;
 import org.jhotdraw.draw.figure.Figure;
 import org.jhotdraw.utils.geom.Geom;
