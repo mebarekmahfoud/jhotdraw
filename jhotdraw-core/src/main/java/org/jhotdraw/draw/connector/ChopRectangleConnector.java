@@ -33,8 +33,9 @@ public class ChopRectangleConnector extends AbstractConnector {
   @Override
   public Point2D.Double findStart(ConnectionFigure connection) {
     Figure startFigure = connection.getStartConnector().getOwner();
+    int nodeCount = connection.getNodeCount();
     Point2D.Double from;
-    if (connection.getNodeCount() <= 2 || connection.getLiner() != null) {
+    if (nodeCount <= 2 || connection.getLiner() != null) {
       if (connection.getEndConnector() == null) {
         from = connection.getEndPoint();
       } else {
@@ -51,13 +52,17 @@ public class ChopRectangleConnector extends AbstractConnector {
   @Override
   public Point2D.Double findEnd(ConnectionFigure connection) {
     Figure endFigure = connection.getEndConnector().getOwner();
+    int nodeCount = connection.getNodeCount();
+    boolean sameStartAndEndFigure = connection.getStartFigure() == connection.getEndFigure();
+    boolean hasLiner = connection.getLiner() != null;
+    boolean useStartGeometry =
+        hasLiner || nodeCount <= 2 || (nodeCount <= 3 && sameStartAndEndFigure);
+
     Point2D.Double from;
-    if (connection.getNodeCount() <= 3 && connection.getStartFigure() == connection.getEndFigure()
-        || connection.getNodeCount() <= 2
-        || connection.getLiner() != null) {
+    if (useStartGeometry) {
       if (connection.getStartConnector() == null) {
         from = connection.getStartPoint();
-      } else if (connection.getStartFigure() == connection.getEndFigure()) {
+      } else if (sameStartAndEndFigure) {
         Rectangle2D.Double r1 =
             getConnectorTarget(connection.getStartConnector().getOwner()).getBounds();
         from = new Point2D.Double(r1.x + r1.width / 2, r1.y);
@@ -67,7 +72,7 @@ public class ChopRectangleConnector extends AbstractConnector {
         from = new Point2D.Double(r1.x + r1.width / 2, r1.y + r1.height / 2);
       }
     } else {
-      from = connection.getPoint(connection.getNodeCount() - 2);
+      from = connection.getPoint(nodeCount - 2);
     }
     return chop(endFigure, from);
   }
