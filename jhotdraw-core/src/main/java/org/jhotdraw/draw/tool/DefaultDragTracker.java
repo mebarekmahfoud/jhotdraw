@@ -62,12 +62,6 @@ public class DefaultDragTracker extends AbstractTool implements DragTracker {
    */
   protected Point2D.Double previousPoint;
 
-  /**
-   * The anchorPoint holds the location of the mouse of the mousePressed event. This coordinate is
-   * not constrained using the Constrainer of the DrawingView.
-   */
-  protected Point2D.Double anchorPoint;
-
   private boolean isDragging;
   private HashSet<Figure> transformedFigures;
 
@@ -114,7 +108,7 @@ public class DefaultDragTracker extends AbstractTool implements DragTracker {
         }
       }
       if (dragRect != null) {
-        anchorPoint = previousPoint = view.viewToDrawing(anchor);
+        previousPoint = view.viewToDrawing(anchor);
         anchorOrigin = previousOrigin = new Point2D.Double(dragRect.x, dragRect.y);
       }
     }
