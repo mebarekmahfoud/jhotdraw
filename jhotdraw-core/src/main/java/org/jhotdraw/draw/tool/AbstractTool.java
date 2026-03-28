@@ -108,21 +108,21 @@ public abstract class AbstractTool extends AbstractBean implements Tool {
     return getView().getDrawing();
   }
 
-  protected Point2D.Double viewToDrawing(Point p) {
-    return constrainPoint(getView().viewToDrawing(p));
+  protected Point2D.Double viewToDrawing(Point viewPoint) {
+    return constrainPoint(getView().viewToDrawing(viewPoint));
   }
 
-  protected Point2D.Double constrainPoint(Point p, Figure... figure) {
-    return constrainPoint(getView().viewToDrawing(p), figure);
+  protected Point2D.Double constrainPoint(Point viewPoint, Figure... figure) {
+    return constrainPoint(getView().viewToDrawing(viewPoint), figure);
   }
 
-  protected Point2D.Double constrainPoint(Point2D.Double p, Figure... figure) {
+  protected Point2D.Double constrainPoint(Point2D.Double drawingPoint, Figure... figure) {
     if (getView() == null) {
-      return p;
+      return drawingPoint;
     }
     return getView().getConstrainer() == null
-        ? p
-        : getView().getConstrainer().constrainPoint(p, figure);
+        ? drawingPoint
+        : getView().getConstrainer().constrainPoint(drawingPoint, figure);
   }
 
   /**
@@ -209,7 +209,8 @@ public abstract class AbstractTool extends AbstractBean implements Tool {
   public void keyPressed(KeyEvent evt) {
     if (!evt.isConsumed()) {
       if (evt.getSource() instanceof Container) {
-        editor.setActiveView(editor.findView((Container) evt.getSource()));
+        Container targetComponent = (Container) evt.getSource();
+        editor.setActiveView(editor.findView(targetComponent));
       }
       Object obj = null;
       if (inputMap != null) {
@@ -282,7 +283,7 @@ public abstract class AbstractTool extends AbstractBean implements Tool {
   public void mouseMoved(MouseEvent evt) {}
 
   @Override
-  public void mouseDragged(MouseEvent e) {}
+  public void mouseDragged(MouseEvent mouseEvent) {}
 
   @Override
   public void mousePressed(MouseEvent evt) {
