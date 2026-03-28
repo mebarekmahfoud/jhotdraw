@@ -69,19 +69,23 @@ public class SerializationInputFormat implements InputFormat {
   @SuppressWarnings("unchecked")
   @Override
   public void read(InputStream in, Drawing drawing, boolean replace) throws IOException {
+    if (in == null) {
+      throw new IllegalArgumentException("Input stream must not be null");
+    }
+    if (drawing == null) {
+      throw new IllegalArgumentException("Drawing must not be null");
+    }
+
     try {
       ObjectInputStream oin = new ObjectInputStream(in);
-      Drawing d = (Drawing) oin.readObject();
-      if (replace) {
-        for (Map.Entry<AttributeKey<?>, Object> e : d.attr().getAttributes().entrySet()) {
-          drawing.attr().set((AttributeKey<Object>) e.getKey(), e.getValue());
-        }
-      }
-      for (Figure f : d.getChildren()) {
-        drawing.add(f);
-      }
+      Drawing deserializedDrawing = (Drawing) oin.readObject();
+      mergeDrawing(deserializedDrawing, drawing, replace);
     } catch (ClassNotFoundException ex) {
       IOException ioe = new IOException("Couldn't read drawing.");
+      ioe.initCause(ex);
+      throw ioe;
+    } catch (ClassCastException ex) {
+      IOException ioe = new IOException("Input stream does not contain a serialized Drawing.");
       ioe.initCause(ex);
       throw ioe;
     }
@@ -96,18 +100,37 @@ public class SerializationInputFormat implements InputFormat {
   @Override
   public void read(Transferable t, Drawing drawing, boolean replace)
       throws UnsupportedFlavorException, IOException {
+    if (t == null) {
+      throw new IllegalArgumentException("Transferable must not be null");
+    }
+    if (drawing == null) {
+      throw new IllegalArgumentException("Drawing must not be null");
+    }
+
     try {
-      Drawing d = (Drawing) t.getTransferData(dataFlavor);
-      if (replace) {
-        for (Map.Entry<AttributeKey<?>, Object> e : d.attr().getAttributes().entrySet()) {
-          drawing.attr().set((AttributeKey<Object>) e.getKey(), e.getValue());
-        }
+      Drawing transferableDrawing = (Drawing) t.getTransferData(dataFlavor);
+      mergeDrawing(transferableDrawing, drawing, replace);
+    } catch (ClassCastException ex) {
+      IOException ioe =
+          new IOException("Transferable does not contain a Drawing for the expected DataFlavor.");
+      ioe.initCause(ex);
+      throw ioe;
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void mergeDrawing(Drawing sourceDrawing, Drawing targetDrawing, boolean replace) {
+    if (sourceDrawing == null) {
+      throw new IllegalArgumentException("Source drawing must not be null");
+    }
+    if (replace) {
+      for (Map.Entry<AttributeKey<?>, Object> e :
+          sourceDrawing.attr().getAttributes().entrySet()) {
+        targetDrawing.attr().set((AttributeKey<Object>) e.getKey(), e.getValue());
       }
-      for (Figure f : d.getChildren()) {
-        drawing.add(f);
-      }
-    } catch (Throwable th) {
-      th.printStackTrace();
+    }
+    for (Figure f : sourceDrawing.getChildren()) {
+      targetDrawing.add(f);
     }
   }
 }
