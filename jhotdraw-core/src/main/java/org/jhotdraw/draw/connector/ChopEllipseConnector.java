@@ -28,6 +28,9 @@ import org.jhotdraw.utils.geom.Geom;
 public class ChopEllipseConnector extends ChopRectangleConnector {
 
   private static final long serialVersionUID = 1L;
+  private static final float DEFAULT_STROKE_WIDTH = 1f;
+  private static final double HALF = 0.5d;
+  private static final double NO_GROWTH = 0d;
 
   public ChopEllipseConnector() {}
 
@@ -41,7 +44,7 @@ public class ChopEllipseConnector extends ChopRectangleConnector {
 
   private float getStrokeWidth(Figure f) {
     Double w = f.attr().get(STROKE_WIDTH);
-    return (w == null) ? 1f : w.floatValue();
+    return (w == null) ? DEFAULT_STROKE_WIDTH : w.floatValue();
   }
 
   @Override
@@ -53,13 +56,13 @@ public class ChopEllipseConnector extends ChopRectangleConnector {
       switch (target.attr().get(STROKE_PLACEMENT)) {
         case CENTER:
         default:
-          grow = getStrokeTotalWidth(target, AttributeKeys.scaleFromContext(target)) / 2d;
+          grow = getStrokeTotalWidth(target, AttributeKeys.scaleFromContext(target)) * HALF;
           break;
         case OUTSIDE:
           grow = getStrokeTotalWidth(target, AttributeKeys.scaleFromContext(target));
           break;
         case INSIDE:
-          grow = 0f;
+          grow = NO_GROWTH;
           break;
       }
       Geom.grow(r, grow, grow);
