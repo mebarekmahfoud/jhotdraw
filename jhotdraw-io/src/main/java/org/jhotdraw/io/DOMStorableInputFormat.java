@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.jhotdraw.draw.Drawing;
 import org.jhotdraw.draw.figure.Figure;
@@ -82,17 +83,42 @@ public class DOMStorableInputFormat implements InputFormat {
 
   @Override
   public void read(InputStream in, Drawing drawing, boolean replace) throws IOException {
-    JavaxDOMInput domi = new JavaxDOMInput(factory, in);
-    domi.openElement(factory.getName(drawing));
-    domi.openElement("figures");
+    validateReadInput(in, drawing);
+    JavaxDOMInput domInput = openDrawingFiguresElement(in, drawing);
+    replaceDrawingChildrenIfRequested(drawing, replace);
+    addFiguresFromDomInput(domInput, drawing);
+    closeDrawingFiguresElement(domInput);
+  }
+
+  private void validateReadInput(InputStream in, Drawing drawing) {
+    Objects.requireNonNull(in, "in must not be null");
+    Objects.requireNonNull(drawing, "drawing must not be null");
+  }
+
+  private JavaxDOMInput openDrawingFiguresElement(InputStream in, Drawing drawing)
+      throws IOException {
+    JavaxDOMInput domInput = new JavaxDOMInput(factory, in);
+    domInput.openElement(factory.getName(drawing));
+    domInput.openElement("figures");
+    return domInput;
+  }
+
+  private void replaceDrawingChildrenIfRequested(Drawing drawing, boolean replace) {
     if (replace) {
       drawing.removeAllChildren();
     }
-    for (int i = 0; i < domi.getElementCount(); i++) {
-      drawing.add((Figure) domi.readObject(i));
+  }
+
+  private void addFiguresFromDomInput(JavaxDOMInput domInput, Drawing drawing) throws IOException {
+    int figureCount = domInput.getElementCount();
+    for (int i = 0; i < figureCount; i++) {
+      drawing.add((Figure) domInput.readObject(i));
     }
-    domi.closeElement();
-    domi.closeElement();
+  }
+
+  private void closeDrawingFiguresElement(JavaxDOMInput domInput) throws IOException {
+    domInput.closeElement();
+    domInput.closeElement();
   }
 
   @Override
