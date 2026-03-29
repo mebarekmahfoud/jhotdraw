@@ -136,9 +136,8 @@ public abstract class AbstractAttributedCompositeFigure extends AbstractAttribut
   }
 
   @Override
-  public boolean add(Figure figure) {
+  public void add(Figure figure) {
     add(getChildCount(), figure);
-    return true;
   }
 
   @Override

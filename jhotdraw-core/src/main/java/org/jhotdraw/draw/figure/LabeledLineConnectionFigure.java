@@ -189,12 +189,11 @@ public class LabeledLineConnectionFigure extends LineConnectionFigure implements
   }
 
   @Override
-  public boolean add(Figure figure) {
+  public void add(Figure figure) {
     basicAdd(figure);
     if (getDrawing() != null) {
       figure.addNotify(getDrawing());
     }
-    return true;
   }
 
   @Override

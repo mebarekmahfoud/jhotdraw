@@ -57,10 +57,8 @@ public interface CompositeFigure extends Figure {
    * <p>This is a convenience method for {@code add(getChildCount(), child);}
    *
    * <p>This method calls {@code figureAdded} on all registered {@code CompositeFigureListener}s.
-   *
-   * @return {@code true} if this CompositeFigure changed as a result of the call
    */
-  public boolean add(Figure child);
+  public void add(Figure child);
 
   /**
    * Adds a child to the figure at the specified index.
