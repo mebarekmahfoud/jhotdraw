@@ -12,9 +12,6 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import javax.swing.undo.AbstractUndoableEdit;
-import javax.swing.undo.CannotRedoException;
-import javax.swing.undo.CannotUndoException;
 import org.jhotdraw.draw.DrawingView;
 import org.jhotdraw.draw.handle.BezierNodeHandle;
 import org.jhotdraw.draw.handle.BezierOutlineHandle;
@@ -57,38 +54,13 @@ public class LineFigure extends BezierFigure {
   // COMPOSITE FIGURES
   // CLONING
   // EVENT HANDLING
-
-  /** Handles a mouse click. */
   @Override
-  public boolean handleMouseClick(Point2D.Double p, MouseEvent evt, DrawingView view) {
-    if (evt.getClickCount() == 2 && view.getHandleDetailLevel() == 0) {
-      willChange();
-      final int index = splitSegment(p, (float) (5f / view.getScaleFactor()));
-      if (index != -1) {
-        final BezierPath.Node newNode = getNode(index);
-        fireUndoableEditHappened(new AbstractUndoableEdit() {
-          private static final long serialVersionUID = 1L;
+  protected boolean canSplitSegmentOnDoubleClick(MouseEvent evt, DrawingView view) {
+    return evt.getClickCount() == 2 && view.getHandleDetailLevel() == 0;
+  }
 
-          @Override
-          public void redo() throws CannotRedoException {
-            super.redo();
-            willChange();
-            addNode(index, newNode);
-            changed();
-          }
-
-          @Override
-          public void undo() throws CannotUndoException {
-            super.undo();
-            willChange();
-            removeNode(index);
-            changed();
-          }
-        });
-        changed();
-        return true;
-      }
-    }
-    return false;
+  @Override
+  protected String getSplitSegmentUndoPresentationName() {
+    return null;
   }
 }

@@ -614,21 +614,36 @@ public class BezierFigure extends AbstractAttributedFigure {
     return path.splitSegment(split, tolerance);
   }
 
+  /**
+   * Hook for subclasses which need a different trigger condition for splitting on double click.
+   */
+  protected boolean canSplitSegmentOnDoubleClick(MouseEvent evt, DrawingView view) {
+    return evt.getClickCount() == 2 && view.getHandleDetailLevel() % 2 == 0;
+  }
+
+  /**
+   * Hook for subclasses that don't want a custom undo presentation name.
+   */
+  protected String getSplitSegmentUndoPresentationName() {
+    ResourceBundleUtil labels = ResourceBundleUtil.getBundle("org.jhotdraw.draw.Labels");
+    return labels.getString("edit.bezierPath.splitSegment.text");
+  }
+
   /** Handles a mouse click. */
   @Override
   public boolean handleMouseClick(Point2D.Double p, MouseEvent evt, DrawingView view) {
-    if (evt.getClickCount() == 2 && view.getHandleDetailLevel() % 2 == 0) {
+    if (canSplitSegmentOnDoubleClick(evt, view)) {
       willChange();
       final int index = splitSegment(p, 5f / view.getScaleFactor());
       if (index != -1) {
         final BezierPath.Node newNode = getNode(index);
+        final String presentationName = getSplitSegmentUndoPresentationName();
         fireUndoableEditHappened(new AbstractUndoableEdit() {
           private static final long serialVersionUID = 1L;
 
           @Override
           public String getPresentationName() {
-            ResourceBundleUtil labels = ResourceBundleUtil.getBundle("org.jhotdraw.draw.Labels");
-            return labels.getString("edit.bezierPath.splitSegment.text");
+            return presentationName != null ? presentationName : super.getPresentationName();
           }
 
           @Override
