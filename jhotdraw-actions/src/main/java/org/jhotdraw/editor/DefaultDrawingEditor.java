@@ -51,6 +51,7 @@ public class DefaultDrawingEditor extends AbstractBean implements DrawingEditor 
   private DrawingView activeView;
   private boolean isEnabled = true;
   private final ToolHandler toolHandler;
+  private final ToolActivationStrategy activationStrategy;
 
   private class ToolHandler extends ToolAdapter {
 
@@ -100,6 +101,11 @@ public class DefaultDrawingEditor extends AbstractBean implements DrawingEditor 
   };
 
   public DefaultDrawingEditor() {
+    this(new DefaultToolActivationStrategy());
+  }
+
+  public DefaultDrawingEditor(ToolActivationStrategy activationStrategy) {
+    this.activationStrategy = Objects.requireNonNull(activationStrategy, "activationStrategy");
     toolHandler = new ToolHandler();
     setDefaultAttribute(FILL_COLOR, Color.white);
     setDefaultAttribute(STROKE_COLOR, Color.black);
@@ -115,30 +121,12 @@ public class DefaultDrawingEditor extends AbstractBean implements DrawingEditor 
     if (newValue == tool) {
       return;
     }
-    if (tool != null) {
-      for (DrawingView v : views) {
-        v.removeMouseListener(tool);
-        v.removeMouseMotionListener(tool);
-        v.removeKeyListener(tool);
-        if (tool instanceof MouseWheelListener) {
-          v.removeMouseWheelListener((MouseWheelListener) tool);
-        }
-      }
-      tool.deactivate(this);
-      tool.removeToolListener(toolHandler);
+    if (oldValue != null) {
+      activationStrategy.deactivate(oldValue, this);
     }
     tool = newValue;
     if (tool != null) {
-      tool.activate(this);
-      for (DrawingView v : views) {
-        v.addMouseListener(tool);
-        v.addMouseMotionListener(tool);
-        v.addKeyListener(tool);
-        if (tool instanceof MouseWheelListener) {
-          v.addMouseWheelListener((MouseWheelListener) tool);
-        }
-      }
-      tool.addToolListener(toolHandler);
+      activationStrategy.activate(tool, this);
     }
     firePropertyChange(TOOL_PROPERTY, oldValue, newValue);
   }
@@ -147,6 +135,9 @@ public class DefaultDrawingEditor extends AbstractBean implements DrawingEditor 
   public void setActiveView(DrawingView newValue) {
     DrawingView oldValue = activeView;
     activeView = newValue;
+    if (tool != null && oldValue != newValue) {
+      activationStrategy.onActiveViewChanged(tool, this, oldValue, newValue);
+    }
     firePropertyChange(ACTIVE_VIEW_PROPERTY, oldValue, newValue);
   }
 
@@ -202,16 +193,11 @@ public class DefaultDrawingEditor extends AbstractBean implements DrawingEditor 
   @Override
   public void remove(DrawingView view) {
     view.getComponent().removeFocusListener(focusHandler);
-    views.remove(view);
     if (tool != null) {
-      view.removeMouseListener(tool);
-      view.removeMouseMotionListener(tool);
-      view.removeKeyListener(tool);
+      activationStrategy.onViewRemoved(tool, this, view);
     }
+    views.remove(view);
     view.removeNotify(this);
-    if (activeView == view) {
-      view = (views.size() > 0) ? views.iterator().next() : null;
-    }
     updateActiveView();
   }
 
@@ -221,11 +207,47 @@ public class DefaultDrawingEditor extends AbstractBean implements DrawingEditor 
     view.addNotify(this);
     view.getComponent().addFocusListener(focusHandler);
     if (tool != null) {
-      view.addMouseListener(tool);
-      view.addMouseMotionListener(tool);
-      view.addKeyListener(tool);
+      activationStrategy.onViewAdded(tool, this, view);
     }
     updateActiveView();
+  }
+
+  void registerToolOnAllViews(Tool targetTool) {
+    for (DrawingView view : views) {
+      registerToolOnView(targetTool, view);
+    }
+  }
+
+  void unregisterToolFromAllViews(Tool targetTool) {
+    for (DrawingView view : views) {
+      unregisterToolFromView(targetTool, view);
+    }
+  }
+
+  void registerToolOnView(Tool targetTool, DrawingView view) {
+    view.addMouseListener(targetTool);
+    view.addMouseMotionListener(targetTool);
+    view.addKeyListener(targetTool);
+    if (targetTool instanceof MouseWheelListener) {
+      view.addMouseWheelListener((MouseWheelListener) targetTool);
+    }
+  }
+
+  void unregisterToolFromView(Tool targetTool, DrawingView view) {
+    view.removeMouseListener(targetTool);
+    view.removeMouseMotionListener(targetTool);
+    view.removeKeyListener(targetTool);
+    if (targetTool instanceof MouseWheelListener) {
+      view.removeMouseWheelListener((MouseWheelListener) targetTool);
+    }
+  }
+
+  void addToolListener(Tool targetTool) {
+    targetTool.addToolListener(toolHandler);
+  }
+
+  void removeToolListener(Tool targetTool) {
+    targetTool.removeToolListener(toolHandler);
   }
 
   @Override
