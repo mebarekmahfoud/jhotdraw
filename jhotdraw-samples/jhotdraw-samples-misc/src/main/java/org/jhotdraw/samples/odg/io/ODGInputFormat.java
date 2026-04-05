@@ -24,12 +24,8 @@ import org.jhotdraw.draw.*;
 import org.jhotdraw.draw.figure.CompositeFigure;
 import org.jhotdraw.draw.figure.Figure;
 import org.jhotdraw.draw.io.InputFormat;
-import org.jhotdraw.samples.odg.figures.ODGBezierFigure;
-import org.jhotdraw.samples.odg.figures.ODGEllipseFigure;
 import org.jhotdraw.samples.odg.figures.ODGFigure;
 import org.jhotdraw.samples.odg.figures.ODGGroupFigure;
-import org.jhotdraw.samples.odg.figures.ODGPathFigure;
-import org.jhotdraw.samples.odg.figures.ODGRectFigure;
 import org.jhotdraw.samples.odg.geom.EnhancedPath;
 import org.jhotdraw.utils.geom.path.BezierPath;
 import org.jhotdraw.utils.io.StreamPosTokenizer;
@@ -51,9 +47,12 @@ public class ODGInputFormat implements InputFormat {
   /** Holds the document that is currently being read. */
   private Document document;
 
-  private ODGStylesReader styles;
+  private ODGStyleParser styleParser;
+  private final ODGShapeFactory shapeFactory;
 
-  public ODGInputFormat() {}
+  public ODGInputFormat() {
+    shapeFactory = new ODGShapeFactory();
+  }
 
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter() {
@@ -122,8 +121,8 @@ public class ODGInputFormat implements InputFormat {
       stylesIn = new ByteArrayInputStream(tmp);
     }
 
-    styles = new ODGStylesReader();
-    styles.read(stylesIn);
+    styleParser = new ODGStyleParser();
+    styleParser.parseStyles(stylesIn);
 
     readFiguresFromDocumentContent(contentIn, drawing, replace);
   }
@@ -137,18 +136,18 @@ public class ODGInputFormat implements InputFormat {
 
     try {
       DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-      Document doc = dBuilder.parse(in);
+      document = dBuilder.parse(in);
     } catch (ParserConfigurationException | SAXException ex) {
       IOException e = new IOException(ex.getMessage());
       e.initCause(ex);
       throw e;
     }
 
-    if (styles == null) {
-      styles = new ODGStylesReader();
+    if (styleParser == null) {
+      styleParser = new ODGStyleParser();
     }
 
-    styles.read(document.getDocumentElement());
+    styleParser.parseStyles(document.getDocumentElement());
 
     // Search for the first 'office:drawing' element in the XML document
     // in preorder sequence
@@ -395,7 +394,7 @@ public class ODGInputFormat implements InputFormat {
    */
   private ODGFigure readCustomShapeElement(Element elem) throws IOException {
     String styleName = elem.getAttributeNS(DRAWING_NAMESPACE, "style-name");
-    Map<AttributeKey<?>, Object> a = styles.getAttributes(styleName, "graphic");
+    Map<AttributeKey<?>, Object> a = styleParser.resolveStyle(styleName, "graphic");
 
     Rectangle2D.Double figureBounds = new Rectangle2D.Double(
         toLength(Optional.ofNullable(elem.getAttributeNS(SVG_NAMESPACE, "x")).orElse("0"), 1),
@@ -488,71 +487,37 @@ public class ODGInputFormat implements InputFormat {
   /** Creates a Ellipse figure. */
   private ODGFigure createEnhancedGeometryEllipseFigure(
       Rectangle2D.Double bounds, Map<AttributeKey<?>, Object> a) throws IOException {
-    ODGEllipseFigure figure = new ODGEllipseFigure();
-    figure.setBounds(bounds);
-    figure.attr().setAttributes(a);
-    return figure;
+    return shapeFactory.createEllipse(bounds, a);
   }
 
   /** Creates a Rect figure. */
   private ODGFigure createEnhancedGeometryRectangleFigure(
       Rectangle2D.Double bounds, Map<AttributeKey<?>, Object> a) throws IOException {
-    ODGRectFigure figure = new ODGRectFigure();
-    figure.setBounds(bounds);
-    figure.attr().setAttributes(a);
-    return figure;
+    return shapeFactory.createRect(bounds, a);
   }
 
   /** Creates a Line figure. */
   private ODGFigure createLineFigure(
       Point2D.Double p1, Point2D.Double p2, Map<AttributeKey<?>, Object> a) throws IOException {
-    ODGPathFigure figure = new ODGPathFigure();
-    figure.setBounds(p1, p2);
-    figure.attr().setAttributes(a);
-    return figure;
+    return shapeFactory.createLine(p1, p2, a);
   }
 
   /** Creates a Polyline figure. */
   private ODGFigure createPolylineFigure(Point2D.Double[] points, Map<AttributeKey<?>, Object> a)
       throws IOException {
-    ODGPathFigure figure = new ODGPathFigure();
-    ODGBezierFigure bezier = new ODGBezierFigure();
-    for (Point2D.Double p : points) {
-      bezier.addNode(new BezierPath.Node(p.x, p.y));
-    }
-    figure.removeAllChildren();
-    figure.add(bezier);
-    figure.attr().setAttributes(a);
-    return figure;
+    return shapeFactory.createPolyline(points, a);
   }
 
   /** Creates a Polygon figure. */
   private ODGFigure createPolygonFigure(Point2D.Double[] points, Map<AttributeKey<?>, Object> a)
       throws IOException {
-    ODGPathFigure figure = new ODGPathFigure();
-    ODGBezierFigure bezier = new ODGBezierFigure();
-    for (Point2D.Double p : points) {
-      bezier.addNode(new BezierPath.Node(p.x, p.y));
-    }
-    bezier.setClosed(true);
-    figure.removeAllChildren();
-    figure.add(bezier);
-    figure.attr().setAttributes(a);
-    return figure;
+    return shapeFactory.createPolygon(points, a);
   }
 
   /** Creates a Path figure. */
   private ODGFigure createPathFigure(BezierPath[] paths, Map<AttributeKey<?>, Object> a)
       throws IOException {
-    ODGPathFigure figure = new ODGPathFigure();
-    figure.removeAllChildren();
-    for (BezierPath p : paths) {
-      ODGBezierFigure bezier = new ODGBezierFigure();
-      bezier.setBezierPath(p);
-      figure.add(bezier);
-    }
-    figure.attr().setAttributes(a);
-    return figure;
+    return shapeFactory.createPath(paths, a);
   }
 
   /**
@@ -636,7 +601,7 @@ public class ODGInputFormat implements InputFormat {
         toLength(Optional.ofNullable(elem.getAttributeNS(SVG_NAMESPACE, "y2")).orElse("0"), 1));
 
     String styleName = elem.getAttributeNS(DRAWING_NAMESPACE, "style-name");
-    Map<AttributeKey<?>, Object> a = styles.getAttributes(styleName, "graphic");
+    Map<AttributeKey<?>, Object> a = styleParser.resolveStyle(styleName, "graphic");
 
     ODGFigure f = createLineFigure(p1, p2, a);
 
@@ -652,8 +617,8 @@ public class ODGInputFormat implements InputFormat {
     }
     String styleName = elem.getAttributeNS(DRAWING_NAMESPACE, "style-name");
 
-    HashMap<AttributeKey<?>, Object> a = new HashMap<AttributeKey<?>, Object>();
-    a.putAll(styles.getAttributes(styleName, "graphic"));
+    HashMap<AttributeKey<?>, Object> a =
+        new HashMap<AttributeKey<?>, Object>(styleParser.resolveStyle(styleName, "graphic"));
     readCommonDrawingShapeAttributes(elem, a);
 
     ODGFigure f = createPathFigure(paths, a);
@@ -684,8 +649,8 @@ public class ODGInputFormat implements InputFormat {
     }
     String styleName = elem.getAttributeNS(DRAWING_NAMESPACE, "style-name");
 
-    HashMap<AttributeKey<?>, Object> a = new HashMap<AttributeKey<?>, Object>();
-    a.putAll(styles.getAttributes(styleName, "graphic"));
+    HashMap<AttributeKey<?>, Object> a =
+        new HashMap<AttributeKey<?>, Object>(styleParser.resolveStyle(styleName, "graphic"));
     readCommonDrawingShapeAttributes(elem, a);
 
     ODGFigure f = createPolygonFigure(points, a);
@@ -716,8 +681,8 @@ public class ODGInputFormat implements InputFormat {
     }
     String styleName = elem.getAttributeNS(DRAWING_NAMESPACE, "style-name");
 
-    HashMap<AttributeKey<?>, Object> a = new HashMap<AttributeKey<?>, Object>();
-    a.putAll(styles.getAttributes(styleName, "graphic"));
+    HashMap<AttributeKey<?>, Object> a =
+        new HashMap<AttributeKey<?>, Object>(styleParser.resolveStyle(styleName, "graphic"));
     readCommonDrawingShapeAttributes(elem, a);
 
     ODGFigure f = createPolylineFigure(points, a);
